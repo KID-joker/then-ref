@@ -5,7 +5,7 @@ interface PromiseMethods {
   catch: Function
   finally: Function
 }
-interface Thenable extends PromiseMethods {
+export interface Thenable extends PromiseMethods {
   value: any
 }
 
