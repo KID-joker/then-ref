@@ -137,4 +137,12 @@ describe('then-ref', () => {
     expect(await thenRef(asyncReject()).catch((res: number) => ++res).finally(() => count++).catch((res: number) => ++res).value).toBe(2)
     expect(count).toBe(2)
   })
+
+  it('nesting', async () => {
+    expect(thenRef(thenRef(syncResolve))().value).toBe(1)
+    expect(await thenRef(thenRef(asyncResolve())).value).toBe(1)
+
+    expect(thenRef(syncResolve)().then((res: number) => thenRef(res)).value).toBe(1)
+    expect(await thenRef(asyncResolve)().then((res: number) => thenRef(res)).value).toBe(1)
+  })
 })

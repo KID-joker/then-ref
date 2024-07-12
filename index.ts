@@ -9,10 +9,6 @@ interface Thenable extends PromiseMethods {
   value: any
 }
 
-function isFunction(val: unknown): val is Function {
-  return typeof val === 'function'
-}
-
 function isSymbol(val: unknown): val is symbol {
   return typeof val === 'symbol'
 }
@@ -83,24 +79,37 @@ function createThenable(value: any, rawType: string): Thenable {
   }
 }
 
+const RAW_TYPE = Symbol('RAW_TYPE')
+const IS_PROXY = Symbol('IS_PROXY')
+
 function proxyThenable(target: any, rawType?: string): any {
-  const fn = isFunction(target) ? target : () => target
-  fn.__RAW_TYPE__ = rawType || getRawType(target)
+  if (target[IS_PROXY])
+    return target
+
+  const fn = () => target
+  fn[RAW_TYPE] = rawType || getRawType(target)
+  fn[IS_PROXY] = true
 
   return new Proxy(fn, {
     get(target, p, receiver) {
-      if (target.__RAW_TYPE__ === 'Function' || isSymbol(p) || !['then', 'catch', 'finally', 'value'].includes(p)) {
+      if (isSymbol(p) && [RAW_TYPE, IS_PROXY].includes(p)) {
         return Reflect.get(target, p, receiver)
       }
       else {
         const result = target()
-        return createThenable(result, target.__RAW_TYPE__)[p as keyof Thenable]
+        if (target[RAW_TYPE] === 'Function' || isSymbol(p) || !['then', 'catch', 'finally', 'value'].includes(p)) {
+          return Reflect.get(result, p, receiver)
+        }
+        else {
+          return createThenable(result, target[RAW_TYPE])[p as keyof Thenable]
+        }
       }
     },
     apply(target, thisArg, argArray) {
+      const result = target()
       try {
-        const result = Reflect.apply(target, thisArg, argArray)
-        return proxyThenable(result)
+        const value = Reflect.apply(result, thisArg, argArray)
+        return proxyThenable(value)
       }
       catch (error) {
         return proxyThenable(error, 'ThrowError')
