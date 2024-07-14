@@ -13,6 +13,10 @@ function isSymbol(val: unknown): val is symbol {
   return typeof val === 'symbol'
 }
 
+function isFunction(val: unknown): val is Function {
+  return typeof val === 'function'
+}
+
 function getTypeString(value: unknown): string {
   return Object.prototype.toString.call(value)
 }
@@ -83,7 +87,7 @@ const RAW_TYPE = Symbol('RAW_TYPE')
 const IS_PROXY = Symbol('IS_PROXY')
 
 function proxyThenable(target: any, rawType?: string): any {
-  if (target[IS_PROXY])
+  if (isFunction(target) && target[IS_PROXY])
     return target
 
   const fn = () => target
